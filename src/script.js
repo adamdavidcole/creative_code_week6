@@ -50,7 +50,7 @@ const doorRoughnessTexture = textureLoader.load("/textures/door/roughness.jpg");
 const matcapTexture = textureLoader.load("/textures/matcaps/8.png");
 const gradientTexture = textureLoader.load("/textures/gradients/5.jpg");
 
-const environmentMapTexture = cubeTextureLoader.load([
+let environmentMapTexture = cubeTextureLoader.load([
   "/textures/environmentMaps/0/px.jpg",
   "/textures/environmentMaps/0/nx.jpg",
   "/textures/environmentMaps/0/py.jpg",
@@ -152,19 +152,29 @@ scene.add(light);
 // material.clearcoatRoughness = 0
 
 // Textures
-const videoTexture = new THREE.VideoTexture(video);
+const videoTexture = new THREE.VideoTexture(
+  video,
+  THREE.CubeUVReflectionMapping
+);
+
+videoTexture.center = new THREE.Vector2(0.5, 0.5);
+videoTexture.wrapS = videoTexture.wrapT = THREE.ClampToEdgeWrapping;
+videoTexture.repeat.set(0.75, 0.75);
 
 // Materials
 
 const material = new THREE.MeshStandardMaterial({
-  //   map: videoTexture,
+  map: videoTexture,
 });
 material.metalness = 0.7;
 material.roughness = 0.2;
 gui.add(material, "metalness").min(0).max(1).step(0.0001);
 gui.add(material, "roughness").min(0).max(1).step(0.0001);
 material.envMap = environmentMapTexture;
-material.map = videoTexture;
+// material.map = videoTexture;
+// material.alphaMap = videoTexture;
+// material.transparent = true;
+// material.opacity = 0.9;
 // material.envMap = videoTexture;
 
 const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 64), material);
@@ -200,23 +210,61 @@ const ground = new THREE.Mesh(
   material
 );
 ground.rotateX(-Math.PI / 2);
+ground.position.y = -3;
 scene.add(ground);
 
 // generate spheres
+const center = new THREE.Vector3(0, 2, 0);
 const spheres = [];
 for (let i = 0; i < parameters.sphereCount; i++) {
-  const radius = Math.random() * 2;
+  const radius = Math.random() * 1.75;
   const geometry = new THREE.SphereGeometry(radius, 32, 16);
   const sphere = new THREE.Mesh(geometry, material);
 
+  spheres.push(sphere);
+
   sphere.position.x = (Math.random() - 0.5) * 20;
-  sphere.position.y = (Math.random() - 0.5) * 2;
+  sphere.position.y = Math.random() * 5;
   sphere.position.z = (Math.random() - 0.5) * 20;
+
+  const distance = sphere.position.sub(center);
+  const directionA = new THREE.Vector3(1, 0, 0);
+  const directionB = distance.clone().normalize();
+
+  const rotationAngle = Math.acos(directionA.dot(directionB));
+  const rotationAxis = directionA.clone().cross(directionB).normalize();
+
+  sphere.rotateOnAxis(rotationAxis, rotationAngle + Math.PI);
 
   if (!intersectsEmptyCenterSphere(radius, sphere.position)) {
     scene.add(sphere);
   }
 }
+
+// let angleIncrement = (2 * Math.PI) / 10;
+// for (let i = 0; i < 2 * Math.PI; i += angleIncrement) {
+//   const radius = 5;
+//   const x = Math.cos(i) * radius;
+//   const z = Math.sin(i) * radius;
+
+//   const geometry = new THREE.SphereGeometry(1, 32, 16);
+//   const sphere = new THREE.Mesh(geometry, material);
+
+//   sphere.position.x = x;
+//   sphere.position.y = 2;
+//   sphere.position.z = z;
+
+//   const distance = sphere.position.sub(center);
+//   const directionA = new THREE.Vector3(1, 0, 0);
+//   const directionB = distance.clone().normalize();
+
+//   const rotationAngle = Math.acos(directionA.dot(directionB));
+//   const rotationAxis = directionA.clone().cross(directionB).normalize();
+
+//   sphere.rotateOnAxis(rotationAxis, rotationAngle + Math.PI);
+
+//   scene.add(sphere);
+// }
 
 /**
  * Sizes
@@ -259,6 +307,10 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 } else {
   console.error("MediaDevices interface not available.");
 }
+// var vidCanvas = document.createElement("canvas");
+// vidCanvas.width = 640;
+// vidCanvas.height = 640;
+// let dataUrl = "";
 
 /**
  * Camera
@@ -309,6 +361,21 @@ const clock = new THREE.Clock();
 const tick = () => {
   const elapsedTime = clock.getElapsedTime();
 
+  // if (Math.random() < 0.1) {
+  //   vidCanvas.getContext("2d").drawImage(video, 0, 0, 640, 640);
+  //   const dataUrl = vidCanvas.toDataURL();
+
+  //   environmentMapTexture = cubeTextureLoader.load([
+  //     dataUrl,
+  //     dataUrl,
+  //     dataUrl,
+  //     dataUrl,
+  //     dataUrl,
+  //     dataUrl,
+  //   ]);
+  //   material.envMap = environmentMapTexture;
+  // }
+
   // Update objects
   sphere.rotation.y = 0.1 * elapsedTime;
   plane.rotation.y = 0.1 * elapsedTime;
@@ -317,6 +384,11 @@ const tick = () => {
   sphere.rotation.x = 0.15 * elapsedTime;
   plane.rotation.x = 0.15 * elapsedTime;
   torus.rotation.x = 0.15 * elapsedTime;
+
+  if (spheres[10]) {
+    console.log(spheres[10].position);
+    spheres[10].position.y = 1.05 * elapsedTime;
+  }
 
   // Update controls
   controls.update();
