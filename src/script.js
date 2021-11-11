@@ -2,6 +2,8 @@ import "./style.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import * as dat from "lil-gui";
+import gsap from "gsap";
+
 import { Int8Attribute } from "three";
 
 /**
@@ -47,16 +49,16 @@ const doorHeightTexture = textureLoader.load("/textures/door/height.jpg");
 const doorNormalTexture = textureLoader.load("/textures/door/normal.jpg");
 const doorMetalnessTexture = textureLoader.load("/textures/door/metalness.jpg");
 const doorRoughnessTexture = textureLoader.load("/textures/door/roughness.jpg");
-const matcapTexture = textureLoader.load("/textures/matcaps/8.png");
+const matcapTexture = textureLoader.load("/textures/matcaps/4.png");
 const gradientTexture = textureLoader.load("/textures/gradients/5.jpg");
 
 let environmentMapTexture = cubeTextureLoader.load([
-  "/textures/environmentMaps/0/px.jpg",
-  "/textures/environmentMaps/0/nx.jpg",
-  "/textures/environmentMaps/0/py.jpg",
-  "/textures/environmentMaps/0/ny.jpg",
-  "/textures/environmentMaps/0/pz.jpg",
-  "/textures/environmentMaps/0/nz.jpg",
+  "/textures/environmentMaps/4/px.jpg",
+  "/textures/environmentMaps/4/nx.jpg",
+  "/textures/environmentMaps/4/py.jpg",
+  "/textures/environmentMaps/4/ny.jpg",
+  "/textures/environmentMaps/4/pz.jpg",
+  "/textures/environmentMaps/4/nz.jpg",
 ]);
 
 // Canvas
@@ -69,14 +71,16 @@ const scene = new THREE.Scene();
 /**
  * Lights
  */
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+// scene.add(ambientLight);
 
-const light = new THREE.PointLight(0xffffff, 0.5);
+const light = new THREE.PointLight(0xffffff, 0.25);
 light.position.x = 2;
 light.position.y = 3;
 light.position.z = 4;
 scene.add(light);
+
+scene.background = environmentMapTexture;
 
 // function init() {
 //   const videoTexture = new THREE.VideoTexture(video);
@@ -151,6 +155,27 @@ scene.add(light);
 // material.clearcoat = 1
 // material.clearcoatRoughness = 0
 
+function createMaterialArray(filename) {
+  const skyboxImagepaths = [
+    "/textures/environmentMaps/4/px.jpg",
+    "/textures/environmentMaps/4/nx.jpg",
+    "/textures/environmentMaps/4/py.jpg",
+    "/textures/environmentMaps/4/ny.jpg",
+    "/textures/environmentMaps/4/pz.jpg",
+    "/textures/environmentMaps/4/nz.jpg",
+  ];
+  const materialArray = skyboxImagepaths.map((image) => {
+    let texture = new THREE.TextureLoader().load(image);
+
+    return new THREE.MeshBasicMaterial({ map: texture, side: THREE.BackSide }); // <---
+  });
+  return materialArray;
+}
+
+const skyboxGeo = new THREE.BoxGeometry(50, 50, 50);
+const skybox = new THREE.Mesh(skyboxGeo, createMaterialArray());
+scene.add(skybox);
+
 // Textures
 const videoTexture = new THREE.VideoTexture(
   video,
@@ -171,46 +196,114 @@ material.roughness = 0.2;
 gui.add(material, "metalness").min(0).max(1).step(0.0001);
 gui.add(material, "roughness").min(0).max(1).step(0.0001);
 material.envMap = environmentMapTexture;
+material.envMapIntensity = 1;
+
+// We use this class to pass to dat.gui
+// so when it manipulates near or far
+// near is never > far and far is never < near
+// Also when dat.gui maniplates color we'll
+// update both the fog and background colors.
+class FogGUIHelper {
+  constructor(fog, backgroundColor) {
+    this.fog = fog;
+    this.backgroundColor = backgroundColor;
+  }
+  get near() {
+    return this.fog.near;
+  }
+  set near(v) {
+    this.fog.near = v;
+    this.fog.far = Math.max(this.fog.far, v);
+  }
+  get far() {
+    return this.fog.far;
+  }
+  set far(v) {
+    this.fog.far = v;
+    this.fog.near = Math.min(this.fog.near, v);
+  }
+  get color() {
+    return `#${this.fog.color.getHexString()}`;
+  }
+  set color(hexString) {
+    this.fog.color.set(hexString);
+    this.backgroundColor.set(hexString);
+  }
+}
+
+const near = 1;
+const far = 1;
+const color = "lightblue";
+scene.fog = new THREE.Fog(color, near, far);
+scene.background = new THREE.Color(color);
+
+const fogGUIHelper = new FogGUIHelper(scene.fog, scene.background);
+gui.add(fogGUIHelper, "near", near, far).listen();
+gui.add(fogGUIHelper, "far", near, far).listen();
+gui.addColor(fogGUIHelper, "color");
+
+gsap.to(scene.fog, {
+  far: 100,
+  delay: 1,
+  duration: 30,
+  onComplete: () => {
+    scene.fog.near = 0.001;
+    scene.fog.far = 0;
+    scene.fog.density = 0;
+
+    console.log("scene.fog", scene.fog);
+  },
+});
+
 // material.map = videoTexture;
 // material.alphaMap = videoTexture;
 // material.transparent = true;
 // material.opacity = 0.9;
 // material.envMap = videoTexture;
 
-const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 64), material);
-sphere.geometry.setAttribute(
-  "uv2",
-  new THREE.BufferAttribute(sphere.geometry.attributes.uv.array, 2)
-);
-sphere.position.x = -1.5;
-sphere.position.y = 0.5;
+// const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 64), material);
+// sphere.geometry.setAttribute(
+//   "uv2",
+//   new THREE.BufferAttribute(sphere.geometry.attributes.uv.array, 2)
+// );
+// sphere.position.x = -1.5;
+// sphere.position.y = 0.5;
 
-const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 100, 100), material);
-plane.geometry.setAttribute(
-  "uv2",
-  new THREE.BufferAttribute(plane.geometry.attributes.uv.array, 2)
-);
-plane.position.y = 0.5;
+// const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1, 100, 100), material);
+// plane.geometry.setAttribute(
+//   "uv2",
+//   new THREE.BufferAttribute(plane.geometry.attributes.uv.array, 2)
+// );
+// plane.position.y = 0.5;
 
-const torus = new THREE.Mesh(
-  new THREE.TorusGeometry(0.3, 0.2, 64, 128),
-  material
-);
-torus.geometry.setAttribute(
-  "uv2",
-  new THREE.BufferAttribute(torus.geometry.attributes.uv.array, 2)
-);
-torus.position.x = 1.5;
-torus.position.y = 0.5;
-scene.add(sphere, plane, torus);
+// const torus = new THREE.Mesh(
+//   new THREE.TorusGeometry(0.3, 0.2, 64, 128),
+//   material
+// );
+// torus.geometry.setAttribute(
+//   "uv2",
+//   new THREE.BufferAttribute(torus.geometry.attributes.uv.array, 2)
+// );
+// torus.position.x = 1.5;
+// torus.position.y = 0.5;
+// scene.add(sphere, plane, torus);
 
 // generate ground
+const groundMaterial = new THREE.MeshMatcapMaterial({
+  matcap: matcapTexture,
+  envMap: environmentMapTexture,
+});
+// const groundMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+
+// material.matcap = matcapTexture;
+
+console.log("groundMaterial", groundMaterial);
+
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(50, 50, 100, 100),
-  material
+  new THREE.CylinderGeometry(3, 3, 1.25, 64),
+  groundMaterial
 );
-ground.rotateX(-Math.PI / 2);
-ground.position.y = -3;
+ground.position.y = -1.25;
 scene.add(ground);
 
 // generate spheres
@@ -238,6 +331,13 @@ for (let i = 0; i < parameters.sphereCount; i++) {
 
   if (!intersectsEmptyCenterSphere(radius, sphere.position)) {
     scene.add(sphere);
+
+    gsap.to(sphere.position, {
+      delay: 0 + Math.random() * 120,
+      duration: 5 + 25 * Math.random(),
+      y: Math.random() * 50 + 50,
+      ease: "power1.in",
+    });
   }
 }
 
@@ -326,7 +426,7 @@ const camera = new THREE.PerspectiveCamera(
   100
 );
 camera.position.x = 1;
-camera.position.y = 2;
+camera.position.y = 4;
 camera.position.z = 3;
 
 // camera.rotateY(Math.PI / 2);
@@ -377,18 +477,17 @@ const tick = () => {
   // }
 
   // Update objects
-  sphere.rotation.y = 0.1 * elapsedTime;
-  plane.rotation.y = 0.1 * elapsedTime;
-  torus.rotation.y = 0.1 * elapsedTime;
+  // sphere.rotation.y = 0.1 * elapsedTime;
+  // plane.rotation.y = 0.1 * elapsedTime;
+  // torus.rotation.y = 0.1 * elapsedTime;
 
-  sphere.rotation.x = 0.15 * elapsedTime;
-  plane.rotation.x = 0.15 * elapsedTime;
-  torus.rotation.x = 0.15 * elapsedTime;
+  // sphere.rotation.x = 0.15 * elapsedTime;
+  // plane.rotation.x = 0.15 * elapsedTime;
+  // torus.rotation.x = 0.15 * elapsedTime;
 
-  if (spheres[10]) {
-    console.log(spheres[10].position);
-    spheres[10].position.y = 1.05 * elapsedTime;
-  }
+  // if (spheres[10]) {
+  //   spheres[10].position.y = 1.2 * elapsedTime;
+  // }
 
   // Update controls
   controls.update();
