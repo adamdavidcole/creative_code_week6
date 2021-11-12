@@ -29,9 +29,10 @@ playButton.addEventListener("click", () => {
   playAudio();
 });
 
-function initScene() {
+const scene = new THREE.Scene();
+
+function initGeometry() {
   // Scene
-  const scene = new THREE.Scene();
 
   // Debug
   // const gui = new dat.GUI();
@@ -362,7 +363,9 @@ function initScene() {
 
   //   scene.add(sphere);
   // }
+}
 
+function initScene() {
   /**
    * Sizes
    */
@@ -494,3 +497,5 @@ if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 } else {
   console.error("MediaDevices interface not available.");
 }
+
+initGeometry();
