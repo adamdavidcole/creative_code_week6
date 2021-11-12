@@ -19,6 +19,7 @@ video {
   height: 400px;
   border-radius: 50%;
   object-fit: cover;
+  transform: rotateY(180deg);
 }
 
 .webgl {
@@ -49,4 +50,12 @@ video {
   color: #f0d8db;
   font-weight: 900;
   letter-spacing: 3px;
+}
+
+#instructions {
+  align-self: flex-start;
+  margin-left: 100px;
+  font-size: 18px;
+  line-height: 1.5;
+  font-family: sans-serif;
 }
