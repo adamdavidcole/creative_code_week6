@@ -11,6 +11,7 @@ import gsap from "gsap";
 // Canvas
 const canvas = document.querySelector("canvas.webgl");
 const video = document.getElementById("video");
+const fullscreenLink = document.getElementById("enterFullscreen");
 const audio = new Audio("sounds/Nina Simone - I put a spell on you.mp3");
 
 const playButtonContainer = document.getElementById("playButtonContainer");
@@ -27,6 +28,16 @@ let playAudio = async () => {
 playButton.addEventListener("click", () => {
   initScene();
   playAudio();
+});
+
+fullscreenLink.addEventListener("click", () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  }
 });
 
 const scene = new THREE.Scene();
