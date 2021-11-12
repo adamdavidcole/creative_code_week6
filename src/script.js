@@ -269,6 +269,10 @@ function initGeometry() {
       }
     });
 
+    // ENABLE beginning animation
+    playButton.disabled = false;
+    playButton.innerText = "PLAY";
+
     scene.add(gltf.scene);
   });
 
