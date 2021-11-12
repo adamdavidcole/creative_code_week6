@@ -30,6 +30,7 @@ playButton.addEventListener("click", () => {
 });
 
 const scene = new THREE.Scene();
+const spheres = [];
 
 function initGeometry() {
   // Scene
@@ -310,13 +311,11 @@ function initGeometry() {
 
   // generate spheres
   const center = new THREE.Vector3(0, 2, 0);
-  const spheres = [];
+
   for (let i = 0; i < parameters.sphereCount; i++) {
     const radius = Math.random() * 1.75;
     const geometry = new THREE.SphereGeometry(radius, 32, 16);
     const sphere = new THREE.Mesh(geometry, material);
-
-    spheres.push(sphere);
 
     sphere.position.x = (Math.random() - 0.5) * 20;
     sphere.position.y = Math.random() * 5;
@@ -334,12 +333,7 @@ function initGeometry() {
     if (!intersectsEmptyCenterSphere(radius, sphere.position)) {
       scene.add(sphere);
 
-      gsap.to(sphere.position, {
-        delay: 18 + Math.random() * 120,
-        duration: 5 + 25 * Math.random(),
-        y: Math.random() * 50 + 50,
-        ease: "power1.in",
-      });
+      spheres.push(sphere);
     }
   }
 
@@ -447,6 +441,15 @@ function initScene() {
     y: 1.75,
     delay: 18,
     duration: 10,
+  });
+
+  spheres.forEach((sphere) => {
+    gsap.to(sphere.position, {
+      delay: 18 + Math.random() * 120,
+      duration: 5 + 25 * Math.random(),
+      y: Math.random() * 50 + 50,
+      ease: "power1.in",
+    });
   });
 
   /**
